@@ -2,7 +2,12 @@ import streamlit as st
 import pandas as pd
 import pickle
 import os
+import logging
 from tensorflow.keras.models import load_model
+
+# Configure logging for production observability
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -166,58 +171,66 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------- PREDICTION ----------------
 if st.button("Predict Churn"):
+    logger.info("Prediction requested with input data...")
+    
+    with st.spinner("Processing data & predicting..."):
+        try:
+            input_data = pd.DataFrame({
+                'CreditScore': [credit_score],
+                'Geography': [geography],
+                'Gender': [gender],
+                'Age': [age],
+                'Tenure': [tenure],
+                'Balance': [balance],
+                'NumOfProducts': [num_of_products],
+                'HasCrCard': [has_cr_card],
+                'IsActiveMember': [is_active_member],
+                'EstimatedSalary': [estimated_salary]
+            })
 
-    input_data = pd.DataFrame({
-        'CreditScore': [credit_score],
-        'Geography': [geography],
-        'Gender': [gender],
-        'Age': [age],
-        'Tenure': [tenure],
-        'Balance': [balance],
-        'NumOfProducts': [num_of_products],
-        'HasCrCard': [has_cr_card],
-        'IsActiveMember': [is_active_member],
-        'EstimatedSalary': [estimated_salary]
-    })
+            # Encode gender
+            input_data['Gender'] = gender_encoder.transform(input_data['Gender'])
 
-    # Encode gender
-    input_data['Gender'] = gender_encoder.transform(input_data['Gender'])
+            # Geography encoding
+            geo_encoded = geo_encoder.transform(
+                input_data[['Geography']]
+            )
+            if hasattr(geo_encoded, "toarray"):
+                geo_encoded = geo_encoded.toarray()
 
-    # Geography encoding
-    geo_encoded = geo_encoder.transform(
-        input_data[['Geography']]
-    )
-    if hasattr(geo_encoded, "toarray"):
-        geo_encoded = geo_encoded.toarray()
+            geo_encoded_df = pd.DataFrame(
+                geo_encoded,
+                columns=geo_encoder.get_feature_names_out(['Geography'])
+            )
 
-    geo_encoded_df = pd.DataFrame(
-        geo_encoded,
-        columns=geo_encoder.get_feature_names_out(['Geography'])
-    )
+            # Drop geography
+            input_data.drop("Geography", axis=1, inplace=True)
 
-    # Drop geography
-    input_data.drop("Geography", axis=1, inplace=True)
+            # Combine
+            final_data = pd.concat(
+                [input_data.reset_index(drop=True), geo_encoded_df],
+                axis=1
+            )
 
-    # Combine
-    final_data = pd.concat(
-        [input_data.reset_index(drop=True), geo_encoded_df],
-        axis=1
-    )
+            # Reorder columns to ensure match with training
+            expected_columns = [
+                'CreditScore', 'Gender', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 
+                'HasCrCard', 'IsActiveMember', 'EstimatedSalary'
+            ] + list(geo_encoder.get_feature_names_out(['Geography']))
+            final_data = final_data[expected_columns]
 
-    # Reorder columns to ensure match with training
-    expected_columns = [
-        'CreditScore', 'Gender', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 
-        'HasCrCard', 'IsActiveMember', 'EstimatedSalary'
-    ] + list(geo_encoder.get_feature_names_out(['Geography']))
-    final_data = final_data[expected_columns]
+            # Scale
+            final_data_scaled = scaler.transform(final_data)
 
-    # Scale
-    final_data_scaled = scaler.transform(final_data)
+            # Prediction
+            prediction = model.predict(final_data_scaled)
+            prediction_proba = prediction[0][0]
+            logger.info(f"Prediction successful. Probability: {prediction_proba:.4f}")
 
-    # Prediction
-    prediction = model.predict(final_data_scaled)
-
-    prediction_proba = prediction[0][0]
+        except Exception as e:
+            logger.error(f"Prediction failed: {str(e)}", exc_info=True)
+            st.error(f"An error occurred during prediction: {str(e)}")
+            st.stop()
 
     st.markdown("<br>", unsafe_allow_html=True)
 
