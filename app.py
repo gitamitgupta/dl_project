@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pickle
+import os
 from tensorflow.keras.models import load_model
 
 # ---------------- PAGE CONFIG ----------------
@@ -65,16 +66,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- LOAD FILES ----------------
-model = load_model("model.h5")
+@st.cache_resource
+def load_resources():
+    required_files = ["model.h5", "label_encoder_gender.pkl", "onehot_encoder_geo.pkl", "scaler.pkl"]
+    for file in required_files:
+        if not os.path.exists(file):
+            st.error(f"Error: Required file '{file}' not found in the directory. Please check your deployment files.")
+            st.stop()
+            
+    model = load_model("model.h5")
+    
+    with open("label_encoder_gender.pkl", "rb") as file:
+        gender_encoder = pickle.load(file)
+        
+    with open("onehot_encoder_geo.pkl", "rb") as file:
+        geo_encoder = pickle.load(file)
+        
+    with open("scaler.pkl", "rb") as file:
+        scaler = pickle.load(file)
+        
+    return model, gender_encoder, geo_encoder, scaler
 
-with open("label_encoder_gender.pkl", "rb") as file:
-    gender_encoder = pickle.load(file)
-
-with open("onehot_encoder_geo.pkl", "rb") as file:
-    geo_encoder = pickle.load(file)
-
-with open("scaler.pkl", "rb") as file:
-    scaler = pickle.load(file)
+model, gender_encoder, geo_encoder, scaler = load_resources()
 
 # ---------------- HEADER ----------------
 st.markdown('<div class="title">Customer Churn Prediction</div>', unsafe_allow_html=True)
@@ -173,7 +186,9 @@ if st.button("Predict Churn"):
     # Geography encoding
     geo_encoded = geo_encoder.transform(
         input_data[['Geography']]
-    ).toarray()
+    )
+    if hasattr(geo_encoded, "toarray"):
+        geo_encoded = geo_encoded.toarray()
 
     geo_encoded_df = pd.DataFrame(
         geo_encoded,
@@ -188,6 +203,13 @@ if st.button("Predict Churn"):
         [input_data.reset_index(drop=True), geo_encoded_df],
         axis=1
     )
+
+    # Reorder columns to ensure match with training
+    expected_columns = [
+        'CreditScore', 'Gender', 'Age', 'Tenure', 'Balance', 'NumOfProducts', 
+        'HasCrCard', 'IsActiveMember', 'EstimatedSalary'
+    ] + list(geo_encoder.get_feature_names_out(['Geography']))
+    final_data = final_data[expected_columns]
 
     # Scale
     final_data_scaled = scaler.transform(final_data)
