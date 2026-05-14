@@ -73,13 +73,13 @@ st.markdown("""
 # ---------------- LOAD FILES ----------------
 @st.cache_resource
 def load_resources():
-    required_files = ["model.h5", "label_encoder_gender.pkl", "onehot_encoder_geo.pkl", "scaler.pkl"]
+    required_files = ["classification_model.h5", "label_encoder_gender.pkl", "onehot_encoder_geo.pkl", "scaler.pkl"]
     for file in required_files:
         if not os.path.exists(file):
             st.error(f"Error: Required file '{file}' not found in the directory. Please check your deployment files.")
             st.stop()
             
-    model = load_model("model.h5")
+    model = load_model("classification_model.h5")
     
     with open("label_encoder_gender.pkl", "rb") as file:
         gender_encoder = pickle.load(file)
