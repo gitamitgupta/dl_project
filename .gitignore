@@ -1,80 +1,46 @@
-# -----------------------------
-# Python
-# -----------------------------
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# -----------------------------
 # Virtual Environment
-# -----------------------------
 venv/
 env/
 ENV/
 
-# -----------------------------
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Jupyter Notebook
-# -----------------------------
 .ipynb_checkpoints/
 
-# -----------------------------
-# VS Code
-# -----------------------------
-.vscode/
-
-# -----------------------------
-# Environment Variables
-# -----------------------------
-.env
-
-# -----------------------------
 # Logs
-# -----------------------------
 logs/
 *.log
 
-# -----------------------------
-# Dataset Files
-# -----------------------------
-data/
-datasets/
-*.csv
-*.xlsx
-*.json
+# VS Code
+.vscode/
 
-# -----------------------------
-# ML/DL Model Files
-# -----------------------------
-*.h5
-*.hdf5
-*.keras
-*.pt
-*.pth
-*.ckpt
-*.pb
-*.onnx
-*.joblib
-*.pkl
+# OS files
+.DS_Store
+Thumbs.db
 
-# -----------------------------
-# TensorFlow / PyTorch Cache
-# -----------------------------
-runs/
-wandb/
-lightning_logs/
-tensorboard/
-checkpoints/
+# Environment variables
+.env
 
-# -----------------------------
-# Build Files
-# -----------------------------
+# Build / distribution
 build/
 dist/
 *.egg-info/
 
-# -----------------------------
-# System Files
-# -----------------------------
-.DS_Store
-Thumbs.db
+# Streamlit cache
+.streamlit/
+
+# TensorFlow / model checkpoints
+checkpoint
+*.ckpt
+
+# Temporary files
+temp/
+tmp/
+
+# Optional: ignore datasets if very large
+# *.csv
